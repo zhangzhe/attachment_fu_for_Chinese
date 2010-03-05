@@ -40,6 +40,7 @@ module Technoweenie # :nodoc:
       #   has_attachment :storage => :s3
       def has_attachment(options = {})
         # this allows you to redefine the acts' options for each subclass, however
+        options[:to_pinyin]        ||= false
         options[:min_size]         ||= 1
         options[:max_size]         ||= 1.megabyte
         options[:size]             ||= (options[:min_size]..options[:max_size])
@@ -320,7 +321,7 @@ module Technoweenie # :nodoc:
       # Gets an array of the currently used temp paths.  Defaults to a copy of #full_filename.
       def temp_paths
         @temp_paths ||= (new_record? || !respond_to?(:full_filename) || !File.exist?(full_filename) ?
-            [] : [copy_to_temp_file(full_filename)])
+                         [] : [copy_to_temp_file(full_filename)])
       end
 
       # Adds a new temp_path to the array.  This should take a string or a Tempfile.  This class makes no
@@ -397,7 +398,7 @@ module Technoweenie # :nodoc:
       # Initializes a new thumbnail with the given suffix.
       def find_or_initialize_thumbnail(file_name_suffix)
         respond_to?(:parent_id) ?
-          thumbnail_class.find_or_initialize_by_thumbnail_and_parent_id(file_name_suffix.to_s, id) :
+        thumbnail_class.find_or_initialize_by_thumbnail_and_parent_id(file_name_suffix.to_s, id) :
           thumbnail_class.find_or_initialize_by_thumbnail(file_name_suffix.to_s)
       end
 
@@ -469,54 +470,57 @@ module Technoweenie # :nodoc:
       end
       
       def filename_to_pinyin
-        require "find"
-        require 'fileutils'
-    upload_file = self
-    if upload_file.filename =~ /[\xa0-\xff]/ #Chinese
-      UploadFile.transaction do 
-        if upload_file.original_filename.blank?
-          if File.file?(upload_file.public_root)   
-            
-            original_filename = upload_file.filename_without_suffix
-            if original_filename == upload_file.filename
-              upload_file.update_attributes(:original_filename => original_filename)
-            else
-              py = PinYin.instance
-              new_filename = "#{py.to_permlink(original_filename)}.#{upload_file.filename_suffix}"
-              new_file = Rails.root.to_s + upload_file.public_folder_with_public + "/" + new_filename
-              FileUtils.mv upload_file.public_root, new_file
-              upload_file.update_attributes(:original_filename => original_filename, :filename => new_filename)
+        if self.attachment_options[:to_pinyin]
+          require "find"
+          require 'fileutils'
+          upload_file = self
+          if upload_file.filename =~ /[\xa0-\xff]/ #Chinese
+            UploadFile.transaction do 
+              if upload_file.original_filename.blank?
+                if File.file?(upload_file.public_root)   
+                  
+                  original_filename = upload_file.filename_without_suffix
+                  if original_filename == upload_file.filename
+                    upload_file.update_attributes(:original_filename => original_filename)
+                  else
+                    py = PinYin.instance
+                    new_filename = "#{py.to_permlink(original_filename)}.#{upload_file.filename_suffix}"
+                    new_file = Rails.root.to_s + upload_file.public_folder_with_public + "/" + new_filename
+                    FileUtils.mv upload_file.public_root, new_file
+                    upload_file.update_attributes(:original_filename => original_filename, :filename => new_filename)
+                  end
+                end
+              end
+              
+            end
+            begin
+              upload_file.thumbnails.map(&:i18n_filename) if upload_file.try(:thumbnails)
+            rescue
             end
           end
         end
       end
-      begin
-        upload_file.thumbnails.map(&:i18n_filename) if upload_file.try(:thumbnails)
-      rescue
+      
+      def public_folder_with_public(thumbnail = nil)
+        "/public" + public_filename(thumbnail)[/(.*)\/(.+?)/, 1]
       end
-    end
-  end
-  
-  def public_folder_with_public(thumbnail = nil)
-    "/public" + public_filename(thumbnail)[/(.*)\/(.+?)/, 1]
-  end
-  
-  def public_root
-    Rails.root.to_s + public_folder_with_public + "/" + filename
-  end
-    
-  def filename_without_suffix
-    if filename =~ /(.+)\.(.+)/
-      $1
-    else
-      filename
-    end
-  end
+      
+      def public_root
+        Rails.root.to_s + public_folder_with_public + "/" + filename
+      end
+      
+      def filename_without_suffix
+        if filename =~ /(.+)\.(.+)/
+          $1
+        else
+          filename
+        end
+      end
 
-  def filename_suffix
-    filename =~ /(.+)\.(.+)/
-    $2
-  end
+      def filename_suffix
+        filename =~ /(.+)\.(.+)/
+        $2
+      end
     end
   end
 end

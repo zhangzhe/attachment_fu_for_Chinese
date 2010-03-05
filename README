@@ -1,3 +1,14 @@
+Added the featrue of changing filename (Chinese char into PingYin).
+
+Just added one option:
+:to_pinyin     # true or false to determine whether or not to change Chinese charactors into Pinyin
+
+For example:
+has_attachment :storage => :file_system, :to_pinyin => true
+
+Above added by Gary 2010.3.5
+====================================================
+
 attachment-fu
 =============
 

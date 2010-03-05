@@ -5,6 +5,7 @@ Just added one option:
 
 For example:
 has_attachment :storage => :file_system, :to_pinyin => true
+In this case, if the filename is 你好.jpg, the real uploaded file's name is ni-hao.jpg
 
 Above added by Gary 2010.3.5
 ====================================================

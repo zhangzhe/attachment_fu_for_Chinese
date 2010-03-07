@@ -18,7 +18,8 @@ in model:
   has_attachment :storage => :file_system, :to_pinyin => true
 
 
-After these cofig, if the filename is 你好.jpg, the real uploaded file's name saved will be ni-hao.jpg
+After these changes, if the filename is 你好.jpg, the real uploaded file's name saved will be ni-hao.jpg
+Visit http://zhangzhe.heroku.com/blogs/83-attachment_fu-for-creating-Pinyin-filename-for-Chinese-filename for more details.
 
 Above was added by Gary on 2010.3.5
 ====================================================
